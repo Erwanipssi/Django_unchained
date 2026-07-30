@@ -1,0 +1,159 @@
+@baseUrl = http://127.0.0.1:8000
+@adminUsername = Philippe
+@adminPassword = pass1234
+@sheriffUsername = sheriff_demo
+@sheriffPassword = sheriff-password
+@hunterUsername = hunter_demo
+@hunterPassword = hunter-password
+
+### 1. Obtenir le JWT de l'administrateur
+# Remplacer adminUsername et adminPassword par les identifiants du superuser.
+# @name adminLogin
+POST {{baseUrl}}/api/token/
+Content-Type: application/json
+
+{
+  "username": "{{adminUsername}}",
+  "password": "{{adminPassword}}"
+}
+
+### 2. Créer un shérif
+# @name createSheriff
+POST {{baseUrl}}/api/register/sheriff/
+Authorization: Bearer {{adminLogin.response.body.$.access}}
+Content-Type: application/json
+
+{
+  "username": "{{sheriffUsername}}",
+  "password": "{{sheriffPassword}}",
+  "first_name": "Wyatt",
+  "last_name": "Earp",
+  "mandate_started_at": "2026-01-01",
+  "mandate_ended_at": null,
+  "city": "Tombstone"
+}
+
+### 3. Créer un chasseur
+# @name createHunter
+POST {{baseUrl}}/api/register/hunter/
+Authorization: Bearer {{adminLogin.response.body.$.access}}
+Content-Type: application/json
+
+{
+  "username": "{{hunterUsername}}",
+  "password": "{{hunterPassword}}",
+  "first_name": "Django",
+  "last_name": "Freeman",
+  "nickname": "The D",
+  "license_number": "H-DEMO-001"
+}
+
+### 4. Obtenir le JWT du shérif
+# @name sheriffLogin
+POST {{baseUrl}}/api/token/
+Content-Type: application/json
+
+{
+  "username": "{{sheriffUsername}}",
+  "password": "{{sheriffPassword}}"
+}
+
+### 5. Obtenir le JWT du chasseur
+# @name hunterLogin
+POST {{baseUrl}}/api/token/
+Content-Type: application/json
+
+{
+  "username": "{{hunterUsername}}",
+  "password": "{{hunterPassword}}"
+}
+
+### 6. Créer une personne recherchée
+# @name createWantedPerson
+POST {{baseUrl}}/api/wanted-persons/
+Authorization: Bearer {{sheriffLogin.response.body.$.access}}
+Content-Type: application/json
+
+{
+  "name": "Billy Crash",
+  "description": "Recherché pour plusieurs attaques de diligences.",
+  "danger_level": "HIGH"
+}
+
+### 7. Créer un contrat
+# @name createMission
+POST {{baseUrl}}/api/missions/
+Authorization: Bearer {{sheriffLogin.response.body.$.access}}
+Content-Type: application/json
+
+{
+  "wanted_person": {{createWantedPerson.response.body.$.id}},
+  "commissioned_by": {{createSheriff.response.body.$.id}},
+  "reward": "5000.00"
+}
+
+### 8. Le chasseur déclare avoir capturé la cible
+POST {{baseUrl}}/api/missions/{{createMission.response.body.$.id}}/claim/
+Authorization: Bearer {{hunterLogin.response.body.$.access}}
+Content-Type: application/json
+
+{
+  "result": "CAPTURED"
+}
+
+### 9. Le shérif valide le résultat
+POST {{baseUrl}}/api/missions/{{createMission.response.body.$.id}}/validate-result/
+Authorization: Bearer {{sheriffLogin.response.body.$.access}}
+Content-Type: application/json
+
+{}
+
+### 10. Vérifier la personne capturée
+GET {{baseUrl}}/api/wanted-persons/{{createWantedPerson.response.body.$.id}}/
+
+### 11. Vérifier les contrats et la balance du chasseur
+GET {{baseUrl}}/api/hunters/me/
+Authorization: Bearer {{hunterLogin.response.body.$.access}}
+
+### 12. Créer une seconde personne pour tester le refus
+# @name createRejectedWantedPerson
+POST {{baseUrl}}/api/wanted-persons/
+Authorization: Bearer {{sheriffLogin.response.body.$.access}}
+Content-Type: application/json
+
+{
+  "name": "Smitty Bacall",
+  "description": "Recherché pour vol de chevaux.",
+  "danger_level": "MEDIUM"
+}
+
+### 13. Créer un second contrat
+# @name createRejectedMission
+POST {{baseUrl}}/api/missions/
+Authorization: Bearer {{sheriffLogin.response.body.$.access}}
+Content-Type: application/json
+
+{
+  "wanted_person": {{createRejectedWantedPerson.response.body.$.id}},
+  "commissioned_by": {{createSheriff.response.body.$.id}},
+  "reward": "7000.00"
+}
+
+### 14. Le chasseur déclare avoir tué la cible
+POST {{baseUrl}}/api/missions/{{createRejectedMission.response.body.$.id}}/claim/
+Authorization: Bearer {{hunterLogin.response.body.$.access}}
+Content-Type: application/json
+
+{
+  "result": "KILLED"
+}
+
+### 15. Le shérif refuse la déclaration
+POST {{baseUrl}}/api/missions/{{createRejectedMission.response.body.$.id}}/reject-result/
+Authorization: Bearer {{sheriffLogin.response.body.$.access}}
+Content-Type: application/json
+
+{}
+
+### 16. Vérifier que le contrat refusé est redevenu disponible
+GET {{baseUrl}}/api/missions/{{createRejectedMission.response.body.$.id}}/

@@ -120,3 +120,9 @@ STATIC_URL = 'static/'
 
 # Custom authentication model used by hunters and sheriffs.
 AUTH_USER_MODEL = 'bounties.User'
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+}
