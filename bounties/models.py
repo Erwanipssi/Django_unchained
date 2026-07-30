@@ -76,10 +76,16 @@ class WantedPerson(models.Model):
 class BountyMission(models.Model):
     class Status(models.TextChoices):
         OPEN = "OPEN", "Disponible"
-        IN_PROGRESS = "IN_PROGRESS", "En cours"
+        PENDING_VERIFICATION = (
+            "PENDING_VERIFICATION",
+            "En attente de vérification",
+        )
+        CAPTURED = "CAPTURED", "Capture validée"
+        KILLED = "KILLED", "Élimination validée"
+
+    class ClaimedResult(models.TextChoices):
         CAPTURED = "CAPTURED", "Cible capturée"
         KILLED = "KILLED", "Cible éliminée"
-        FAILED = "FAILED", "Échec"
 
     wanted_person = models.ForeignKey(
         WantedPerson,
@@ -106,11 +112,16 @@ class BountyMission(models.Model):
         blank=True,
     )
     reward = models.DecimalField(max_digits=10, decimal_places=2)
-    started_at = models.DateTimeField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
+    claimed_result = models.CharField(
+        max_length=10,
+        choices=ClaimedResult.choices,
+        null=True,
+        blank=True,
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
     received_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
-        max_length=15,
+        max_length=20,
         choices=Status.choices,
         default=Status.OPEN,
     )

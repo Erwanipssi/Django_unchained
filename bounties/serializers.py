@@ -25,8 +25,8 @@ class BountyMissionSerializer(serializers.ModelSerializer):
             "commissioned_by",
             "received_by",
             "reward",
-            "started_at",
-            "completed_at",
+            "claimed_result",
+            "claimed_at",
             "received_at",
             "status",
         ]
