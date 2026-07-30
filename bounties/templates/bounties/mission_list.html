@@ -1,0 +1,36 @@
+{% extends "bounties/base.html" %}
+
+{% block title %}Missions — Django Unchained{% endblock %}
+
+{% block content %}
+<h1>Missions de primes</h1>
+
+{% if missions %}
+<table>
+    <thead>
+        <tr>
+            <th>Cible</th>
+            <th>Récompense</th>
+            <th>Chasseur</th>
+            <th>Statut</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for mission in missions %}
+        <tr>
+            <td>
+                <a href="{% url 'wanted-detail' mission.wanted_person_id %}">
+                    {{ mission.wanted_person.name }}
+                </a>
+            </td>
+            <td>{{ mission.reward }} $</td>
+            <td>{% if mission.hunter %}{{ mission.hunter.nickname }}{% else %}—{% endif %}</td>
+            <td>{{ mission.get_status_display }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>Aucune mission pour le moment.</p>
+{% endif %}
+{% endblock %}

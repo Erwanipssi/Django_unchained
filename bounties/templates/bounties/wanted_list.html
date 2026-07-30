@@ -1,0 +1,30 @@
+{% extends "bounties/base.html" %}
+
+{% block title %}Recherchés — Django Unchained{% endblock %}
+
+{% block content %}
+<h1>Avis de recherche</h1>
+
+{% if wanted_persons %}
+<table>
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Danger</th>
+            <th>Statut</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for person in wanted_persons %}
+        <tr>
+            <td><a href="{% url 'wanted-detail' person.pk %}">{{ person.name }}</a></td>
+            <td>{{ person.get_danger_level_display }}</td>
+            <td>{{ person.get_status_display }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>Aucun avis de recherche pour le moment.</p>
+{% endif %}
+{% endblock %}

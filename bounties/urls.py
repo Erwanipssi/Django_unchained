@@ -1,3 +1,4 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .api_views import (
@@ -5,6 +6,7 @@ from .api_views import (
     HunterViewSet,
     RegistrationViewSet,
     WantedPersonViewSet,
+    me,
 )
 
 
@@ -14,4 +16,6 @@ router.register("missions", BountyMissionViewSet)
 router.register("hunters", HunterViewSet)
 router.register("register", RegistrationViewSet, basename="register")
 
-urlpatterns = router.urls
+urlpatterns = [
+    path("me/", me, name="api-me"),
+] + router.urls

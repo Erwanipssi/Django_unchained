@@ -1,0 +1,76 @@
+{% extends "bounties/base.html" %}
+
+{% block title %}Nouvelle mission — Django Unchained{% endblock %}
+
+{% block content %}
+<h1>Nouvelle mission</h1>
+<p class="meta">Réservé aux shérifs (POST <code>/api/missions/</code>). Le shérif connecté est automatiquement le commissionnaire.</p>
+
+{% if wanted_persons %}
+<form id="mission-form">
+    <label>
+        Criminel
+        <select name="wanted_person" required>
+            {% for person in wanted_persons %}
+            <option value="{{ person.id }}">{{ person.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>
+        Récompense ($)
+        <input type="number" name="reward" min="0" step="0.01" required value="1000.00">
+    </label>
+    <button type="submit">Créer la mission</button>
+</form>
+{% else %}
+<p>Aucun criminel recherché. <a href="{% url 'wanted-create' %}">En ajouter un</a>.</p>
+{% endif %}
+<p id="mission-message"></p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const profile = await Auth.refreshNav();
+    const message = document.getElementById("mission-message");
+    const form = document.getElementById("mission-form");
+
+    if (!profile) {
+        message.className = "error";
+        message.innerHTML = 'Connectez-vous d’abord : <a href="/login/">connexion</a>.';
+        return;
+    }
+    if (profile.role !== "SHERIFF") {
+        message.className = "error";
+        message.textContent = "Seul un shérif peut créer une mission.";
+        return;
+    }
+    if (!form) {
+        return;
+    }
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        message.textContent = "";
+
+        const {ok, data} = await Auth.api("/api/missions/", {
+            method: "POST",
+            body: JSON.stringify({
+                wanted_person: Number(form.wanted_person.value),
+                reward: form.reward.value,
+            }),
+        });
+
+        if (!ok) {
+            message.className = "error";
+            message.textContent = data.detail || JSON.stringify(data);
+            return;
+        }
+
+        message.className = "ok";
+        message.textContent = "Mission créée (#" + data.id + ").";
+        window.location.href = "/missions/";
+    });
+});
+</script>
+{% endblock %}

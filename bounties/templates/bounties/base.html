@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Django Unchained{% endblock %}</title>
+    <style>
+        body {
+            font-family: Georgia, serif;
+            max-width: 720px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            line-height: 1.5;
+            color: #1a1a1a;
+            background: #f7f1e3;
+        }
+        nav a {
+            margin-right: 1rem;
+            color: #5c3317;
+        }
+        h1, h2 {
+            color: #3b2210;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border-bottom: 1px solid #c9b79c;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        .meta {
+            color: #5c4a32;
+            font-size: 0.95rem;
+        }
+        a {
+            color: #8b1e1e;
+        }
+        label {
+            display: block;
+            margin-top: 0.75rem;
+        }
+        input, select, textarea, button {
+            font: inherit;
+            margin-top: 0.25rem;
+        }
+        input, select, textarea {
+            width: 100%;
+            max-width: 420px;
+            padding: 0.35rem;
+            box-sizing: border-box;
+        }
+        button {
+            margin-top: 1rem;
+            padding: 0.4rem 0.9rem;
+            cursor: pointer;
+        }
+        .error {
+            color: #8b1e1e;
+        }
+        .ok {
+            color: #2f5d2f;
+        }
+        .sheriff-only {
+            display: none;
+        }
+        #auth-status {
+            float: right;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="{% url 'home' %}">Accueil</a>
+        <a href="{% url 'wanted-list' %}">Recherchés</a>
+        <a href="{% url 'mission-list' %}">Missions</a>
+        <a class="sheriff-only" href="{% url 'wanted-create' %}">Ajouter un criminel</a>
+        <a class="sheriff-only" href="{% url 'mission-create' %}">Nouvelle mission</a>
+        <span id="auth-status"></span>
+    </nav>
+    <hr>
+    {% block content %}{% endblock %}
+
+    <script>
+        const Auth = {
+            getAccess() {
+                return sessionStorage.getItem("access");
+            },
+            getProfile() {
+                const raw = sessionStorage.getItem("profile");
+                return raw ? JSON.parse(raw) : null;
+            },
+            clear() {
+                sessionStorage.removeItem("access");
+                sessionStorage.removeItem("refresh");
+                sessionStorage.removeItem("profile");
+            },
+            async api(url, options = {}) {
+                const headers = Object.assign(
+                    {"Content-Type": "application/json"},
+                    options.headers || {}
+                );
+                const token = this.getAccess();
+                if (token) {
+                    headers["Authorization"] = "Bearer " + token;
+                }
+                const response = await fetch(url, Object.assign({}, options, {headers}));
+                let data = null;
+                const text = await response.text();
+                if (text) {
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        data = {detail: text};
+                    }
+                }
+                return {ok: response.ok, status: response.status, data};
+            },
+            async loadProfile() {
+                if (!this.getAccess()) {
+                    return null;
+                }
+                const {ok, data} = await this.api("/api/me/");
+                if (!ok) {
+                    this.clear();
+                    return null;
+                }
+                sessionStorage.setItem("profile", JSON.stringify(data));
+                return data;
+            },
+            async refreshNav() {
+                const status = document.getElementById("auth-status");
+                const profile = this.getProfile() || await this.loadProfile();
+                const sheriffLinks = document.querySelectorAll(".sheriff-only");
+
+                if (!profile) {
+                    status.innerHTML = '<a href="/login/">Connexion</a>';
+                    sheriffLinks.forEach((el) => { el.style.display = "none"; });
+                    return null;
+                }
+
+                const label = profile.role === "SHERIFF"
+                    ? "Shérif " + profile.username
+                    : profile.username;
+                status.innerHTML =
+                    label +
+                    ' — <a href="#" id="logout-link">Déconnexion</a>';
+                document.getElementById("logout-link").addEventListener("click", (e) => {
+                    e.preventDefault();
+                    this.clear();
+                    window.location.href = "/";
+                });
+
+                const isSheriff = profile.role === "SHERIFF";
+                sheriffLinks.forEach((el) => {
+                    el.style.display = isSheriff ? "inline" : "none";
+                });
+                return profile;
+            }
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            Auth.refreshNav();
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

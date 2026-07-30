@@ -1,0 +1,26 @@
+{% extends "bounties/base.html" %}
+
+{% block title %}{{ person.name }} — Django Unchained{% endblock %}
+
+{% block content %}
+<h1>{{ person.name }}</h1>
+<p class="meta">
+    Danger : {{ person.get_danger_level_display }} —
+    Statut : {{ person.get_status_display }}
+</p>
+<p>{{ person.description }}</p>
+
+{% if person.missions.all %}
+<h2>Missions liées</h2>
+<ul>
+    {% for mission in person.missions.all %}
+    <li>
+        Récompense : {{ mission.reward }} $ —
+        {{ mission.get_status_display }}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<p><a href="{% url 'wanted-list' %}">← Retour à la liste</a></p>
+{% endblock %}

@@ -1,8 +1,8 @@
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import BountyMission, Hunter, WantedPerson
@@ -21,6 +21,24 @@ from .serializers import (
 )
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def me(request):
+    user = request.user
+    data = {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role,
+    }
+    if hasattr(user, "sheriff_profile"):
+        data["sheriff_id"] = user.sheriff_profile.id
+        data["city"] = user.sheriff_profile.city
+    if hasattr(user, "hunter_profile"):
+        data["hunter_id"] = user.hunter_profile.id
+        data["nickname"] = user.hunter_profile.nickname
+    return Response(data)
+
+
 class WantedPersonViewSet(viewsets.ModelViewSet):
     queryset = WantedPerson.objects.all()
     serializer_class = WantedPersonSerializer
@@ -31,6 +49,9 @@ class BountyMissionViewSet(viewsets.ModelViewSet):
     queryset = BountyMission.objects.all()
     serializer_class = BountyMissionSerializer
     permission_classes = [CanManageBountyMission]
+
+    def perform_create(self, serializer):
+        serializer.save(commissioned_by=self.request.user.sheriff_profile)
 
     @action(detail=True, methods=["post"])
     def claim(self, request, pk=None):

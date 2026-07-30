@@ -18,8 +18,29 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from bounties import views as bounty_views
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("", bounty_views.home, name="home"),
+    path("login/", bounty_views.LoginView.as_view(), name="login"),
+    path("wanted/", bounty_views.WantedPersonListView.as_view(), name="wanted-list"),
+    path(
+        "wanted/nouveau/",
+        bounty_views.WantedCreateView.as_view(),
+        name="wanted-create",
+    ),
+    path(
+        "wanted/<int:pk>/",
+        bounty_views.WantedPersonDetailView.as_view(),
+        name="wanted-detail",
+    ),
+    path("missions/", bounty_views.MissionListView.as_view(), name="mission-list"),
+    path(
+        "missions/nouvelle/",
+        bounty_views.MissionCreateView.as_view(),
+        name="mission-create",
+    ),
+    path("admin/", admin.site.urls),
     path("api/", include("bounties.urls")),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

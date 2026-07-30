@@ -1,0 +1,16 @@
+{% extends "bounties/base.html" %}
+
+{% block title %}Accueil — Django Unchained{% endblock %}
+
+{% block content %}
+<h1>Django Unchained</h1>
+<p>Bureau des primes de l'Ouest.</p>
+<p class="meta">
+    {{ wanted_count }} personne{{ wanted_count|pluralize }} recherchée{{ wanted_count|pluralize }} —
+    {{ mission_count }} mission{{ mission_count|pluralize }} ouverte{{ mission_count|pluralize }}.
+</p>
+<ul>
+    <li><a href="{% url 'wanted-list' %}">Voir les avis de recherche</a></li>
+    <li><a href="{% url 'mission-list' %}">Voir les missions</a></li>
+</ul>
+{% endblock %}

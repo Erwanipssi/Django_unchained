@@ -1,0 +1,74 @@
+{% extends "bounties/base.html" %}
+
+{% block title %}Ajouter un criminel — Django Unchained{% endblock %}
+
+{% block content %}
+<h1>Ajouter un criminel</h1>
+<p class="meta">Réservé aux shérifs (POST <code>/api/wanted-persons/</code>).</p>
+
+<form id="wanted-form">
+    <label>
+        Nom
+        <input type="text" name="name" required maxlength="150">
+    </label>
+    <label>
+        Description
+        <textarea name="description" rows="4" required></textarea>
+    </label>
+    <label>
+        Niveau de danger
+        <select name="danger_level">
+            <option value="LOW">Faible</option>
+            <option value="MEDIUM" selected>Moyen</option>
+            <option value="HIGH">Élevé</option>
+        </select>
+    </label>
+    <button type="submit">Publier l’avis</button>
+</form>
+<p id="wanted-message"></p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const profile = await Auth.refreshNav();
+    const message = document.getElementById("wanted-message");
+
+    if (!profile) {
+        message.className = "error";
+        message.innerHTML = 'Connectez-vous d’abord : <a href="/login/">connexion</a>.';
+        return;
+    }
+    if (profile.role !== "SHERIFF") {
+        message.className = "error";
+        message.textContent = "Seul un shérif peut ajouter un criminel.";
+        return;
+    }
+
+    document.getElementById("wanted-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        message.textContent = "";
+
+        const {ok, data} = await Auth.api("/api/wanted-persons/", {
+            method: "POST",
+            body: JSON.stringify({
+                name: form.name.value,
+                description: form.description.value,
+                danger_level: form.danger_level.value,
+            }),
+        });
+
+        if (!ok) {
+            message.className = "error";
+            message.textContent = data.detail || JSON.stringify(data);
+            return;
+        }
+
+        message.className = "ok";
+        message.textContent = "Criminel ajouté (#" + data.id + ").";
+        window.location.href = "/wanted/" + data.id + "/";
+    });
+});
+</script>
+{% endblock %}

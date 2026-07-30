@@ -1,0 +1,59 @@
+{% extends "bounties/base.html" %}
+
+{% block title %}Connexion — Django Unchained{% endblock %}
+
+{% block content %}
+<h1>Connexion</h1>
+<p class="meta">Identification via l’API JWT (<code>/api/token/</code>).</p>
+
+<form id="login-form">
+    <label>
+        Nom d’utilisateur
+        <input type="text" name="username" required>
+    </label>
+    <label>
+        Mot de passe
+        <input type="password" name="password" required>
+    </label>
+    <button type="submit">Se connecter</button>
+</form>
+<p id="login-message" class="error"></p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const message = document.getElementById("login-message");
+    message.textContent = "";
+    message.className = "error";
+
+    const {ok, data} = await Auth.api("/api/token/", {
+        method: "POST",
+        body: JSON.stringify({
+            username: form.username.value,
+            password: form.password.value,
+        }),
+    });
+
+    if (!ok) {
+        message.textContent = data.detail || "Identifiants incorrects.";
+        return;
+    }
+
+    sessionStorage.setItem("access", data.access);
+    sessionStorage.setItem("refresh", data.refresh);
+
+    const profile = await Auth.loadProfile();
+    if (!profile) {
+        message.textContent = "Token obtenu, mais profil introuvable.";
+        return;
+    }
+
+    message.className = "ok";
+    message.textContent = "Connecté en tant que " + profile.username + ".";
+    window.location.href = profile.role === "SHERIFF" ? "/wanted/nouveau/" : "/";
+});
+</script>
+{% endblock %}

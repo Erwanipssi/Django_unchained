@@ -36,6 +36,7 @@ class BountyMissionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "hunter",
+            "commissioned_by",
             "received_by",
             "claimed_result",
             "claimed_at",
