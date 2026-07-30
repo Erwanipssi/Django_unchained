@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.db.models import Sum
 from rest_framework import serializers
@@ -17,6 +18,7 @@ class WantedPersonSerializer(serializers.ModelSerializer):
             "danger_level",
             "status",
         ]
+        read_only_fields = ["status"]
 
 
 class BountyMissionSerializer(serializers.ModelSerializer):
@@ -44,6 +46,19 @@ class BountyMissionSerializer(serializers.ModelSerializer):
             "status",
         ]
 
+    def validate_wanted_person(self, value):
+        if self.instance and value.pk != self.instance.wanted_person_id:
+            raise serializers.ValidationError(
+                "La cible d'une mission ne peut pas être modifiée."
+            )
+        return value
+
+
+class ClaimMissionSerializer(serializers.Serializer):
+    result = serializers.ChoiceField(
+        choices=BountyMission.ClaimedResult.choices,
+    )
+
 
 class HunterSerializer(serializers.ModelSerializer):
     missions = BountyMissionSerializer(many=True, read_only=True)
@@ -60,6 +75,10 @@ class HunterSerializer(serializers.ModelSerializer):
         ]
 
     def get_balance(self, hunter):
+        if hasattr(hunter, "computed_balance"):
+            total = hunter.computed_balance or Decimal("0.00")
+            return total.quantize(Decimal("0.01"))
+
         result = hunter.missions.filter(
             status__in=[
                 BountyMission.Status.CAPTURED,
@@ -87,6 +106,16 @@ class HunterRegistrationSerializer(serializers.Serializer):
         if Hunter.objects.filter(license_number=value).exists():
             raise serializers.ValidationError("Ce numéro de licence existe déjà.")
         return value
+
+    def validate(self, data):
+        user = User(
+            username=data["username"],
+            first_name=data["first_name"],
+            last_name=data["last_name"],
+            role=User.Role.HUNTER,
+        )
+        validate_password(data["password"], user=user)
+        return data
 
     @transaction.atomic
     def create(self, validated_data):
@@ -130,6 +159,14 @@ class SheriffRegistrationSerializer(serializers.Serializer):
         return value
 
     def validate(self, data):
+        user = User(
+            username=data["username"],
+            first_name=data["first_name"],
+            last_name=data["last_name"],
+            role=User.Role.SHERIFF,
+        )
+        validate_password(data["password"], user=user)
+
         mandate_ended_at = data.get("mandate_ended_at")
         if mandate_ended_at and mandate_ended_at < data["mandate_started_at"]:
             raise serializers.ValidationError(

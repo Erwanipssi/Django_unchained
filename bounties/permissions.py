@@ -1,14 +1,26 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
+from .models import User
+
+
+def _has_role_and_profile(request, role, profile_name):
+    user = request.user
+    return bool(
+        user
+        and user.is_authenticated
+        and user.role == role
+        and hasattr(user, profile_name)
+    )
+
 
 class IsHunter(BasePermission):
     message = "Seul un chasseur de primes peut effectuer cette action."
 
     def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and hasattr(request.user, "hunter_profile")
+        return _has_role_and_profile(
+            request,
+            User.Role.HUNTER,
+            "hunter_profile",
         )
 
 
@@ -16,10 +28,10 @@ class IsSheriff(BasePermission):
     message = "Seul un shérif peut effectuer cette action."
 
     def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and hasattr(request.user, "sheriff_profile")
+        return _has_role_and_profile(
+            request,
+            User.Role.SHERIFF,
+            "sheriff_profile",
         )
 
 

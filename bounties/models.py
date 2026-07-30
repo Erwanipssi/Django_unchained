@@ -1,5 +1,9 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -11,6 +15,40 @@ class User(AbstractUser):
     role = models.CharField(max_length=10, choices=Role.choices)
 
     REQUIRED_FIELDS = ["role"]
+
+    def clean(self):
+        super().clean()
+        if not self.pk:
+            return
+
+        if (
+            self.role != self.Role.HUNTER
+            and hasattr(self, "hunter_profile")
+        ):
+            raise ValidationError(
+                {
+                    "role": (
+                        "Un utilisateur avec un profil chasseur "
+                        "doit garder le rôle HUNTER."
+                    )
+                }
+            )
+        if (
+            self.role != self.Role.SHERIFF
+            and hasattr(self, "sheriff_profile")
+        ):
+            raise ValidationError(
+                {
+                    "role": (
+                        "Un utilisateur avec un profil shérif "
+                        "doit garder le rôle SHERIFF."
+                    )
+                }
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.get_full_name() or self.username
@@ -26,6 +64,24 @@ class Hunter(models.Model):
     nickname = models.CharField(max_length=150)
     license_number = models.CharField(max_length=50, unique=True)
 
+    def clean(self):
+        super().clean()
+        if not self.user_id:
+            return
+
+        if self.user.role != User.Role.HUNTER:
+            raise ValidationError(
+                {"user": "Le profil chasseur exige un utilisateur de rôle HUNTER."}
+            )
+        if hasattr(self.user, "sheriff_profile"):
+            raise ValidationError(
+                {"user": "Cet utilisateur possède déjà un profil shérif."}
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return self.nickname
 
@@ -40,6 +96,24 @@ class Sheriff(models.Model):
     mandate_started_at = models.DateField()
     mandate_ended_at = models.DateField(null=True, blank=True)
     city = models.CharField(max_length=150)
+
+    def clean(self):
+        super().clean()
+        if not self.user_id:
+            return
+
+        if self.user.role != User.Role.SHERIFF:
+            raise ValidationError(
+                {"user": "Le profil shérif exige un utilisateur de rôle SHERIFF."}
+            )
+        if hasattr(self.user, "hunter_profile"):
+            raise ValidationError(
+                {"user": "Cet utilisateur possède déjà un profil chasseur."}
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
@@ -82,6 +156,7 @@ class BountyMission(models.Model):
         )
         CAPTURED = "CAPTURED", "Capture validée"
         KILLED = "KILLED", "Élimination validée"
+        CANCELLED = "CANCELLED", "Annulée"
 
     class ClaimedResult(models.TextChoices):
         CAPTURED = "CAPTURED", "Cible capturée"
@@ -111,7 +186,11 @@ class BountyMission(models.Model):
         null=True,
         blank=True,
     )
-    reward = models.DecimalField(max_digits=10, decimal_places=2)
+    reward = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
     claimed_result = models.CharField(
         max_length=10,
         choices=ClaimedResult.choices,
